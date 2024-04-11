@@ -1,13 +1,15 @@
-// require("dotenv").config()
 
+// load dependencies
 const express = require("express");
-// const {PORT} = process.env;
-// console.log(PORT);
+const logger = require("morgan");
+
 const userRoutes = require("./routes/userRoutes");
 const app = express();
 
-// Middlewares
+// load middlewares
 app.use(express.json());
+app.use(logger("dev"));
+
 
 //Routes
 app.use("/api/users", userRoutes);
