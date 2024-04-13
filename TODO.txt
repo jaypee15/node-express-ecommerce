@@ -1,0 +1,5 @@
+hash otp
+try catch for controllers 
+set up nodemailer
+set up cloudinary
+test endpoints

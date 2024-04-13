@@ -4,6 +4,9 @@ const { EXPIRES_IN, SECRET } = process.env;
 
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
+const emailService = require("..utils/emailService");
+const randomstring = require("randomstring");
+const moment = require("moment");
 
 const BadRequestError = require("../utils/errors/badRequestError");
 const ServerError = require("../utils/errors/serverError");
@@ -56,6 +59,14 @@ const createUser = async (req, res, next) => {
     expiresIn: EXPIRES_IN,
   });
 
+  req.user = {
+    Status: "success",
+    userId: user._id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+  };
+
   // remove password from user response
   userResponse = { ...user_.doc };
   delete userResponse.password;
@@ -83,6 +94,15 @@ const loginUser = async (req, res, next) => {
   const token = jwt.sign({ userID: user._id }, SECRET, {
     expiresIn: EXPIRES_IN,
   });
+
+  req.user = {
+    Status: "success",
+    userId: user._id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+  };
+
   const userResponse = { ...user_.doc };
   delete userResponse.password;
 
@@ -114,7 +134,7 @@ const getAllUsers = async (req, res, next) => {
 };
 
 const updateUser = async (req, res, next) => {
-  const userID = req.params.userId;
+  const userID = req.params.userID;
   const { username, email, address, phoneNumber, photo, role } = req.body;
 
   let user = await User.findById(userID);
@@ -135,6 +155,15 @@ const updateUser = async (req, res, next) => {
   user.role = role || user.role;
 
   user = await user.save();
+
+  req.user = {
+    Status: "success",
+    userId: user._id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+  };
+
   const updatedUser = { ...user.toJSON() };
   delete updatedUser.password;
 
@@ -142,9 +171,9 @@ const updateUser = async (req, res, next) => {
 };
 
 const deleteUser = async (req, res, next) => {
-  const userID = req.params.userId;
+  const userID = req.params.userID;
 
-  let user = await User.findById(userID);
+  const user = await User.findById(userID);
   if (!user) {
     throw new NotFound("User not Found");
   }
@@ -156,20 +185,88 @@ const deleteUser = async (req, res, next) => {
 
   await user.remove();
 
-
-  res.status(304).json({ message: "user deleted succesfully"});
+  res.status(304).json({ message: "user deleted succesfully" });
 };
 
 const updatePassword = async (req, res, next) => {
-  console.log("password update");
+  const { currentPassword, newPassword } = req.body;
+  const userID = req.params.userID;
+
+  const user = await User.findById(userID);
+  if (!user) {
+    throw new NotFound("User not Found");
+  }
+
+  const loggedInUserId = req.user.userId;
+  if (loggedInUserId !== userID) {
+    throw new UnauthorizedError("You are not allowed to access this route");
+  }
+
+  const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isPasswordValid) {
+    throw new UnauthenticatedError("Invalid credentials");
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json({ message: "Password updated successfully" });
 };
 
 const forgotPassword = async (req, res, next) => {
-  console.log("password forgot");
+  const email = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new NotFound("user not found");
+    }
+
+    const otp = randomstring.generate({
+      length: 6,
+      charset: "numeric",
+    });
+
+    const expirationTime = moment().add(10, "minute").toDate();
+
+    user.resetPasswordOTP = otp;
+    user.resetPasswordExpires = expirationTime;
+    await user.save();
+
+    await emailService.sendEmail(
+      email,
+      "Password Reset OTP",
+      `Your OTP for resetting your password is: ${otp}. It will expire in 10 minutes.`
+    );
+
+    res.status(200).json({ message: "OTP sent to your email" });
+  } catch (error) {
+    throw new ServerError("Internal Server Error");
+  }
 };
 
 const resetPassword = async (req, res, next) => {
-  console.log("password reset");
+  try {
+    const { email, token, newPassword } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new NotFound("user not found");
+    }
+    if (
+      user.resetPasswordOTP !== token ||
+      new Date() > user.resetPasswordExpires
+    ) {
+      return res.status(400).json({ error: "Invalid or expired OTP" });
+    }
+    user.password = newPassword;
+    user.resetPasswordOTP = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    throw new ServerError("Internal Server Error");
+  }
 };
 
 module.exports = {

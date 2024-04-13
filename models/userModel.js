@@ -45,6 +45,15 @@ const userSchema = new Schema(
       emun: ["admin", "buyer", "seller"],
       default: "buyer",
     },
+
+    resetPasswordOTP: {
+      type: String,
+    },
+
+    resetPasswordExpires: {
+      type: Date,
+    }
+
   },
   { timestamps: true }
 );
