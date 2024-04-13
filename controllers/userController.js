@@ -1,12 +1,14 @@
 require("dotenv").config();
 
-const { EXPIRES_IN, SECRET } = process.env;
-
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
-const emailService = require("..utils/emailService");
+const emailService = require("../utils/emailService");
 const randomstring = require("randomstring");
 const moment = require("moment");
+const uploadImage = require("../utils/cloudinary");
+const multer = require("multer");
+
+const { EXPIRES_IN, SECRET } = process.env;
 
 const BadRequestError = require("../utils/errors/badRequestError");
 const ServerError = require("../utils/errors/serverError");
@@ -14,65 +16,135 @@ const UnauthenticatedError = require("../utils/errors/unauthenticatedError");
 const UnauthorizedError = require("../utils/errors/unauthorizedError");
 const NotFound = require("../utils/errors/notFound");
 
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image")) {
+      return cb(new BadRequestError("Please upload an image file"), false);
+    }
+    cb(null, true);
+  },
+}).single("photo");
+
 const createUser = async (req, res, next) => {
-  const { username, email, password, address, phoneNumber, photo, role } =
-    req.body;
+  upload(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
 
-  if (!email) {
-    throw new BadRequestError("Email is required");
-  }
+    const { username, email, password, address, phoneNumber, role } = req.body;
+    let photo = "";
 
-  if (!username) {
-    throw new BadRequestError("Username is required");
-  }
+    if (req.file) {
+      try {
+        const result = await uploadImage(req.file.buffer);
+        photo = result.secure_url;
+      } catch (error) {
+        return res
+          .status(500)
+          .json({ message: "Failed to upload image to Cloudinary" });
+      }
+    }
 
-  if (!password) {
-    throw new BadRequestError("Password is required");
-  }
+    try {
+      const user = await User.create({
+        username,
+        email,
+        password,
+        address: address || "",
+        phoneNumber: phoneNumber || "",
+        photo: photo,
+        role: role || "buyer",
+      });
 
-  const emailAlreadyExists = await User.findOne({ email });
-  if (emailAlreadyExists) {
-    throw new BadRequestError("Email already exists");
-  }
+      // Generate Token
+      const token = jwt.sign({ userID: user._id }, SECRET, {
+        expiresIn: EXPIRES_IN,
+      });
 
-  const usernameAlreadyExists = await User.findOne({ username });
-  if (usernameAlreadyExists) {
-    throw new BadRequestError("Username already exists");
-  }
+      // Construct user response object
+      const userResponse = {
+        Status: "success",
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      };
 
-  const user = await User.create(
-    username,
-    email,
-    password,
-    address || "",
-    phoneNumber || "",
-    photo || "",
-    role || "buyer"
-  );
+      // remove password from user response
+      userResponse = { ...user_.doc };
+      delete userResponse.password;
 
-  if (!user) {
-    throw new ServerError("Failed to create user");
-  }
-
-  // Generate Token
-  const token = jwt.sign({ userID: user._id }, SECRET, {
-    expiresIn: EXPIRES_IN,
+      return res.status(201).json({ user: userResponse, token });
+    } catch (error) {
+     
+      throw new ServerError("Failed to create user");
+    }
   });
-
-  req.user = {
-    Status: "success",
-    userId: user._id,
-    username: user.username,
-    email: user.email,
-    role: user.role,
-  };
-
-  // remove password from user response
-  userResponse = { ...user_.doc };
-  delete userResponse.password;
-
-  return res.status(201).json({ user: userResponse, token });
 };
+
+// const createUser = async (req, res, next) => {
+
+//   const { username, email, password, address, phoneNumber, role } =
+//     req.body;
+//   let photo = req.body;
+
+//   if (!email) {
+//     throw new BadRequestError("Email is required");
+//   }
+
+//   if (!username) {
+//     throw new BadRequestError("Username is required");
+//   }
+
+//   if (!password) {
+//     throw new BadRequestError("Password is required");
+//   }
+
+//   const emailAlreadyExists = await User.findOne({ email });
+//   if (emailAlreadyExists) {
+//     throw new BadRequestError("Email already exists");
+//   }
+
+//   const usernameAlreadyExists = await User.findOne({ username });
+//   if (usernameAlreadyExists) {
+//     throw new BadRequestError("Username already exists");
+//   }
+
+//   const user = await User.create(
+//     username,
+//     email,
+//     password,
+//     address || "",
+//     phoneNumber || "",
+//     photo || "",
+//     role || "buyer"
+//   );
+
+//   if (!user) {
+//     throw new ServerError("Failed to create user");
+//   }
+
+//   // Generate Token
+//   const token = jwt.sign({ userID: user._id }, SECRET, {
+//     expiresIn: EXPIRES_IN,
+//   });
+
+//   req.user = {
+//     Status: "success",
+//     userId: user._id,
+//     username: user.username,
+//     email: user.email,
+//     role: user.role,
+//   };
+
+//   // remove password from user response
+//   userResponse = { ...user_.doc };
+//   delete userResponse.password;
+
+//   return res.status(201).json({ user: userResponse, token });
+// };
 
 const loginUser = async (req, res, next) => {
   const { email, username, password } = req.body;
