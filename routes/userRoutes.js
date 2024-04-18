@@ -1,4 +1,6 @@
 const express = require("express");
+const validator = require("../middleware/validator");
+const verifyToken = require("../middleware/authentication");
 
 const {
   createUser,
@@ -10,12 +12,24 @@ const {
   updatePassword,
   forgotPassword,
   resetPassword,
-} = require("../controllers/userController");
+} = require("../controllers/user-controller");
 
 const router = express.Router();
 
-router.route("/:userID").post(createUser).get(getUser).patch(updateUser).delete(deleteUser);
-router.route("/").post(loginUser).get(getAllUsers);
-router.route("/password").post(resetPassword).get(forgotPassword).patch(updatePassword)
+router
+  .route("/:userID")
+  .get(verifyToken, getUser)
+  .patch(verifyToken, updateUser)
+  .delete(verifyToken, deleteUser);
+router
+  .route("/")
+  .post(validator("register"), createUser)
+  .get(verifyToken, getAllUsers);
+router
+  .route("/password/:userID")
+  .get(verifyToken, forgotPassword)
+  .patch(verifyToken, updatePassword);
+router.post("/password/", resetPassword)
+router.post("/login", validator("login"), loginUser);
 
 module.exports = router;

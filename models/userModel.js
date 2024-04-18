@@ -45,6 +45,12 @@ const userSchema = new Schema(
       emun: ["admin", "buyer", "seller"],
       default: "buyer",
     },
+    password: {
+      type: String,
+      required: [true, "user must have a password"],
+      select: false,
+      minLength: [8, "Password must ba at least 8 characters"],
+    },
 
     resetPasswordOTP: {
       type: String,

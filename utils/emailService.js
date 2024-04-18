@@ -4,11 +4,23 @@ const { EMAIL_USER, EMAIL_PASSWORD } = process.env;
 const sendEmail = async (to, subject, text) => {
   try {
     const transport = nodemailer.createTransport({
-      services: "gmail",
-      auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASSWORD,
-      },
+      // services: "gmail",
+      // auth: {
+      //   user: EMAIL_USER,
+      //   pass: EMAIL_PASSWORD,
+      // },
+
+      service: 'gmail',
+            port:465,
+            secure: true,
+            secureConnection: false,
+            auth: {
+                user: EMAIL_USER,
+                pass: EMAIL_PASSWORD, 
+            },
+            tls:{
+                rejectUnAuthorized:true
+            }
     });
     const mailOptions = {
       from: EMAIL_USER,
@@ -19,7 +31,8 @@ const sendEmail = async (to, subject, text) => {
 
     await transport.sendMail(mailOptions);
   } catch (error) {
-    throw new Error("Failed to send email");
+    throw new Error(error);
+    next();
   }
 };
 
