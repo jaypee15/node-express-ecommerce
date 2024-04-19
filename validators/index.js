@@ -1,5 +1,5 @@
-const register = require("./register");
-const login = require("./login");
+const register = require("./user-validators/register");
+const login = require("./user-validators/login");
 
 module.exports = {
     login,
