@@ -1,5 +1,6 @@
 const express = require("express");
 const validator = require("../middleware/validator");
+const verifyToken = require("../middleware/authentication");
 
 const {
   createProduct,
@@ -11,5 +12,14 @@ const {
 
 const router = express.Router();
 
-router.route("/").post(validator("addProduct"), createProduct).get(getAllProducts);
-router.route("/:productID").get(getProduct).patch(validate("updateProduct"), updateProduct).delete(deleteProduct)
+router
+  .route("/")
+  .post(validator("addProduct"), verifyToken, createProduct)
+  .get(getAllProducts);
+router
+  .route("/:productID")
+  .get(getProduct)
+  .patch(validator("updateProduct"), verifyToken, updateProduct)
+  .delete(verifyToken, deleteProduct);
+
+module.exports = router;

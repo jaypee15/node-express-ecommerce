@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const User = require("../models/userModel");
+const User = require("../models/user-model");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const sendEmail = require("../utils/emailService");
@@ -10,7 +10,6 @@ const uploadImage = require("../utils/cloudinary");
 const multer = require("multer");
 const asyncHandler = require("express-async-handler");
 const ErrorObject = require("../utils/error");
-const { message } = require("../validators/register");
 
 const { EXPIRES_IN, SECRET } = process.env;
 
@@ -160,6 +159,7 @@ const getAllUsers = async (req, res, next) => {
 
 const updateUser = async (req, res, next) => {
   const userID = req.params.userID;
+  // Remove photo from req.body
   const { username, email, address, phoneNumber, photo, role } = req.body;
 
   const loggedInUserId = req.user.userID;
@@ -168,7 +168,7 @@ const updateUser = async (req, res, next) => {
       new ErrorObject("You are not allowed to access this user", 401)
     );
   }
-  let user = await User.findById(userId);
+  let user = await User.findById(userID);
 
   if (!user) {
     return next(new ErrorObject("User not Found", 404));
