@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-const productSchema = Joi.object({
+const createProductSchema = Joi.object({
     name: Joi.string().required(),
     description: Joi.string().required(),
     richDescription: Joi.string().allow(null, ''), 
@@ -13,4 +13,4 @@ const productSchema = Joi.object({
     sellerId: Joi.string().required() 
 });
 
-module.exports = productSchema;
+module.exports = createProductSchema;
