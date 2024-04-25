@@ -13,82 +13,85 @@ const ErrorObject = require("../utils/error");
 
 const { EXPIRES_IN, SECRET } = process.env;
 
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith("image")) {
-      return cb(new BadRequestError("Please upload an image file"), false);
-    }
+const storage = multer.diskStorage({});
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
     cb(null, true);
-  },
-}).single("photo");
+  } else {
+    cb(new BadRequestError("Please upload an image file"), false);
+  }
+};
+const upload = multer({
+  storage,
+  fileFilter: multerFilter,
+});
+
+const uploadAvatar = upload.single("photo");
 
 const createUser = asyncHandler(async (req, res, next) => {
-  upload(req, res, async (err) => {
-    if (err) {
-      return next(err);
+  const { username, email, password, address, phoneNumber, role } = req.body;
+  let photo = ""
+
+  if (req.file) {
+    try {
+      const image = { url: req.file.path, id: req.file.filename };
+      const folder = 'user-profile-photos'
+      const result = await uploadImage(image, folder);
+      const photo = result.secure_url;
+      console.log(photo);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to upload Image" });
     }
+  }
 
-    const { username, email, password, address, phoneNumber, role } = req.body;
-    let photo = "";
+  if (!email || !username || !password) {
+    return next(
+      new ErrorObject("email, username, password are all required", 400)
+    );
+  }
 
-    if (req.file) {
-      try {
-        const result = await uploadImage(req.file.buffer);
-        photo = result.secure_url;
-      } catch (error) {
-        return res
-          .status(500)
-          .json({ message: "Failed to upload image to Cloudinary" });
-      }
-    }
+  const emailAlreadyExists = await User.findOne({ email });
+  if (emailAlreadyExists) {
+    return next(new ErrorObject("email already exists", 400));
+  }
 
-    if (!email || !username || !password) {
-      return next(
-        new ErrorObject("email, username, password are all required", 400)
-      );
-    }
+  const usernameAlreadyExists = await User.findOne({ username });
+  if (usernameAlreadyExists) {
+    return next(new ErrorObject("username already exists", 400));
+  }
 
-    const emailAlreadyExists = await User.findOne({ email });
-    if (emailAlreadyExists) {
-      return next(new ErrorObject("email already exists", 400));
-    }
-
-    const usernameAlreadyExists = await User.findOne({ username });
-    if (usernameAlreadyExists) {
-      return next(new ErrorObject("username already exists", 400));
-    }
-
-    const user = await User.create({
-      username,
-      email,
-      password,
-      address: address || "",
-      phoneNumber: phoneNumber || "",
-      photo: photo,
-      role: role || "buyer",
-    });
-
-    // Generate Token
-    const token = jwt.sign({ userID: user._id, role: user.role }, SECRET, {
-      expiresIn: EXPIRES_IN,
-    });
-
-    // Construct user response object
-    const userResponse = {
-      Status: "success",
-      userId: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      token,
-    };
-
-    req.user = userResponse;
-
-    return res.status(201).json({ user: userResponse });
+  const user = await User.create({
+    username,
+    email,
+    password,
+    address: address || "",
+    phoneNumber: phoneNumber || "",
+    photo: photo,
+    role: role || "buyer",
   });
+
+  // Generate Token
+  const token = jwt.sign({ userID: user._id, role: user.role }, SECRET, {
+    expiresIn: EXPIRES_IN,
+  });
+
+  // Construct user response object
+  const userResponse = {
+    Status: "success",
+    userId: user._id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    token,
+  };
+
+  req.user = userResponse;
+  // res.cookie("token", token, {
+  //   httpOnly: true,
+  //   maxAge: EXPIRES_IN * 1000 * 60 * 30,
+  // }); // maxAge is in milliseconds
+
+  return res.status(201).json({ user: userResponse });
 });
 
 const loginUser = async (req, res, next) => {
@@ -219,11 +222,13 @@ const updatePassword = async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
   const userID = req.params.userID;
   if (!currentPassword || !newPassword) {
-    return next(new ErrorObject("provide both passwords", 400))
+    return next(new ErrorObject("provide both passwords", 400));
   }
 
-  if(currentPassword == newPassword) {
-    return res.status(400).json({message: "make a change of password please"})
+  if (currentPassword == newPassword) {
+    return res
+      .status(400)
+      .json({ message: "make a change of password please" });
   }
 
   const loggedInUserId = req.user.userID;
@@ -250,8 +255,7 @@ const updatePassword = async (req, res, next) => {
 };
 
 const forgotPassword = async (req, res, next) => {
-  
-  const userID = req.params.userID
+  const userID = req.params.userID;
   const loggedInUserId = req.user.userID;
   if (loggedInUserId !== userID) {
     return next(
@@ -264,8 +268,7 @@ const forgotPassword = async (req, res, next) => {
     return next(new ErrorObject("user not found", 404));
   }
 
-console.log(user)
-email = user.email
+  email = user.email;
 
   const otp = randomstring.generate({
     length: 6,
@@ -320,4 +323,5 @@ module.exports = {
   updatePassword,
   forgotPassword,
   resetPassword,
+  uploadAvatar,
 };

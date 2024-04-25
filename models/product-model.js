@@ -16,6 +16,9 @@ const productSchema = new Schema({
         type: String,
         validate: {
           validator: function (v) {
+            if (!Array.isArray(v)) {
+                return false; 
+              }
             return v.every((image) => image.length < 2097152);
           },
           message: "Image size should not exceed 2MB",

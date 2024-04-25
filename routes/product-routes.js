@@ -8,13 +8,14 @@ const {
   getProduct,
   updateProduct,
   deleteProduct,
+  uploadProductPhotos,
 } = require("../controllers/product-controller");
 
 const router = express.Router();
 
 router
   .route("/")
-  .post(validator("addProduct"), verifyToken, createProduct)
+  .post(uploadProductPhotos, validator("addProduct"), verifyToken, createProduct)
   .get(getAllProducts);
 router
   .route("/:productID")

@@ -12,6 +12,7 @@ const {
   updatePassword,
   forgotPassword,
   resetPassword,
+  uploadAvatar,
 } = require("../controllers/user-controller");
 
 const router = express.Router();
@@ -23,7 +24,7 @@ router
   .delete(verifyToken, deleteUser);
 router
   .route("/")
-  .post(validator("register"), createUser)
+  .post(uploadAvatar, validator("register"), createUser, )
   .get(verifyToken, getAllUsers);
 router
   .route("/password/:userID")
