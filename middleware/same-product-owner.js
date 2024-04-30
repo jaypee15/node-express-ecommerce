@@ -1,9 +1,10 @@
-const expressAsyncHandler = require("express-async-handler");
+const asyncHandler = require("express-async-handler");
+
 const Product = require("../models/product-model");
 const ErrorObject = require("../utils/error");
 
 
-const sameProductOwner = expressAsyncHandler(async (req, res, next) => {
+const sameProductOwner = asyncHandler(async (req, res, next) => {
     const {productID} = req.params;
   
 

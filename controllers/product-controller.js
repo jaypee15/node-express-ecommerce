@@ -83,7 +83,6 @@ const updateProduct = asyncHandler(async (req, res, next) => {
 
   const productId = req.params.productID;
   const updates = req.body;
-  console.log(productId + "from updateproduct");
 
 
 
