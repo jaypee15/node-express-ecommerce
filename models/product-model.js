@@ -11,20 +11,7 @@ const productSchema = new Schema({
   },
   richDescription: String,
   images: {
-    type: [
-      {
-        type: String,
-        validate: {
-          validator: function (v) {
-            if (!Array.isArray(v)) {
-                return false; 
-              }
-            return v.every((image) => image.length < 2097152);
-          },
-          message: "Image size should not exceed 2MB",
-        },
-      },
-    ],
+    type: [String],
     required: [true, "provide atleast one image"],
   },
   price: {
@@ -66,7 +53,7 @@ const productSchema = new Schema({
     ref: "User",
     required: true,
   },
-});
+}, {timestamps: true});
 
 const Product = model("Product", productSchema);
 module.exports = Product;

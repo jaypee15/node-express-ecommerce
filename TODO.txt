@@ -1,0 +1,12 @@
+hash otps 
+set up nodemailer
+set up cloudinary
+test endpoints
+use joy middleware 
+add joi validation for update user
+read token from cookie
+test image upload for user
+
+ask: 
+1. validation now happens twice on request and on application level, joi and validator
+anyone can change role from buyer to admin

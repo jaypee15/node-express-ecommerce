@@ -14,7 +14,7 @@ const sendEmail = async (to, subject, text) => {
             port:465,
             secure: true,
             secureConnection: false,
-            auth: {
+            auth: { 
                 user: EMAIL_USER,
                 pass: EMAIL_PASSWORD, 
             },

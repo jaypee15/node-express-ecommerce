@@ -27,6 +27,7 @@ const prodError = (err, res) => {
     res.status(err.statusCode ? err.statusCode : 500).json({
       status: "error",
       message: "Something went wrong",
+      err: err,
     });
   }
 };

@@ -10,7 +10,7 @@ cloudinary.config({
 
 const uploadImage = async (image, folder) => {
       const result = await cloudinary.uploader.upload(image.url, {
-        folder: folder, 
+        folder, 
         public_id: image.id,
       });
       return result; 

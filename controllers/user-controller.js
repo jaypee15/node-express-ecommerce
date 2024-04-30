@@ -37,7 +37,7 @@ const createUser = asyncHandler(async (req, res, next) => {
       const image = { url: req.file.path, id: req.file.filename };
       const folder = 'user-profile-photos'
       const result = await uploadImage(image, folder);
-      const photo = result.secure_url;
+      photo = result.secure_url;
       console.log(photo);
     } catch (error) {
       return res.status(500).json({ message: "Failed to upload Image" });

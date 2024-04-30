@@ -18,99 +18,99 @@ const upload = multer({
   fileFilter: multerFilter,
 });
 
-const uploadProductPhotos = upload.array("images");
+const uploadProductPhotos = upload.array("images", 5);
 
 const createProduct = asyncHandler(async (req, res, next) => {
+  
+  const {
+    name,
+    description,
+    richDescription,
+    price,
+    discountRate,
+    rating,
+    quantity,
+    isAvailable,
+    sellerId,
+  } = req.body;
+  let images = [];
+
+  if (req.files && req.files.length > 0) {
     
-
-    if (!req.user || req.user.role !== "seller") {
-        return next( new ErrorObject("You are not allowed to add a product", 403))
-    }
-
-    const {
-      name,
-      description,
-      richDescription,
-      price,
-      discountRate,
-      rating,
-      quantity,
-      isAvailable,
-      sellerId,
-    } = req.body;
-    let images = "";
-
-  if (req.files) {
     try {
-      const image = { url: req.file.path, id: req.file.filename };
-      const folder = 'product-photos'
-      const result = await uploadImage(image, folder);
-      const photo = result.secure_url;
-      console.log(photo);
+      for (const file of req.files) {
+        const image = { url: file.path, id: file.filename };
+        const folder = "product-photos";
+        const result = await uploadImage(image, folder);
+        images.push(result.secure_url);
+        console.log(images)
+      }
     } catch (error) {
       return res.status(500).json({ message: "Failed to upload Image" });
     }
   }
 
-    // Create product using Mongoose
-    const product = await Product.create({
-      name,
-      description,
-      richDescription,
-      images,
-      price,
-      discountRate,
-      rating,
-      quantity,
-      isAvailable,
-      sellerId,
-    });
+  // Create product using Mongoose
+  const product = await Product.create({
+    name,
+    description,
+    richDescription,
+    images,
+    price,
+    discountRate,
+    rating,
+    quantity,
+    isAvailable,
+    sellerId,
+  });
 
-    res.status(201).json({ success: true, product });
+  res.status(201).json({ success: true, product });
 });
 
 const getProduct = asyncHandler(async (req, res, next) => {
   const productId = req.params.productID;
 
   const productDetails = await Product.findOne(productId);
-  res.status(200).json({product: productDetails });
+  res.status(200).json({ product: productDetails });
 });
-
 
 const getAllProducts = asyncHandler(async (req, res, next) => {
-    const products = await Product.find();
-    res.status(200).json({products: products });
+  const products = await Product.find();
+  res.status(200).json({ products: products });
 });
-
 
 const updateProduct = asyncHandler(async (req, res, next) => {
-    const productId = req.params.productID;
-    const updates = req.body;
-    const images = req.file;
 
-    // upload images to cludinary first
-    const updatedProduct = await Product.findByIdAndUpdate(productId, updates, { new: true });
+  const productId = req.params.productID;
+  const updates = req.body;
+  console.log(productId + "from updateproduct");
 
-    res.status(200).json({ success: true, product: updatedProduct });
 
+
+  // upload images to cludinary first
+  const updatedProduct = await Product.findByIdAndUpdate(productId, updates, {
+    new: true,
+  });
+
+  res.status(200).json({ success: true, product: updatedProduct });
 });
 const deleteProduct = asyncHandler(async (req, res, next) => {
-    const productId = req.params.productID;
-    const user = req.user;
+  const productId = req.params.productID;
+  const user = req.user;
 
-    const product = await Product.findById(productId);
-    if (!product) {
-        return next(new ErrorObject("Product not found"), 404);
-    }
+  const product = await Product.findById(productId);
+  if (!product) {
+    return next(new ErrorObject("Product not found"), 404);
+  }
 
-    const isSeller = product.sellerId.toString() === user._id.toString()
-    
-    if (!user.role==="admin" && product.sellerId !== user.userId) {
-        return next(new ErrorObject("You are not allowed here", 403))
-    }
+  const isSeller = product.sellerId.toString() === user._id.toString();
 
-    await Product.findByIdAndDelete(productId)
-    res.status(204).json({ message: "product deleted succesfully" });
+  if (!user.role === "admin" && product.sellerId !== user.userId) {
+    return next(new ErrorObject("You are not allowed here", 403));
+  }
+
+  await Product.findByIdAndDelete(productId);
+  res.status(204).json({ message: "product deleted succesfully" });
 });
 
 module.exports = {

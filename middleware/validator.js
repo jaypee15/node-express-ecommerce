@@ -1,13 +1,15 @@
 const createHttpError = require("http-errors");
 const Joi = require("joi");
 
-const Validators = require("../validators");
+const Validators = require("validator");
 const ErrorObject = require("../utils/error");
 
 module.exports = function (validator) {
+ 
+  // console.log(Validators)
   // if validator does not exist throw error
-  if (!Validators.hasOwnProperty(validator))
-    throw new ErrorObject("validator nonexistent", 500);
+  // if (!Validators.hasOwnProperty(validator))
+  //   throw new ErrorObject("validator nonexistent", 500);
 
   return async function (req, res, next) {
     try {

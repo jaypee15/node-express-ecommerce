@@ -14,6 +14,7 @@ const {
   resetPassword,
   uploadAvatar,
 } = require("../controllers/user-controller");
+const { register, login } = require("../validators");
 
 const router = express.Router();
 
@@ -24,13 +25,13 @@ router
   .delete(verifyToken, deleteUser);
 router
   .route("/")
-  .post(uploadAvatar, validator("register"), createUser, )
+  .post(uploadAvatar, validator(register), createUser, )
   .get(verifyToken, getAllUsers);
 router
   .route("/password/:userID")
   .get(verifyToken, forgotPassword)
   .patch(verifyToken, updatePassword);
 router.post("/password/", resetPassword)
-router.post("/login", validator("login"), loginUser);
+router.post("/login", validator(login), loginUser);
 
 module.exports = router;
